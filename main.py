@@ -53,13 +53,14 @@ def main():
 
     for i in range(10):
 
+        # ===== train =====
+        encoder.train()
+        decoder.train()
+
         with tqdm(total=len(trainloader.dataset)) as progress_bar:
             for real_img, _ in trainloader:
 
                 real_img = real_img.to(device)
-
-                encoder.train()
-                decoder.train()
 
                 z_mean, z_var = encoder(real_img)
                 kl_divergence = -0.5 * torch.mean(
@@ -84,12 +85,12 @@ def main():
                 progress_bar.set_postfix(loss=loss.item())
                 progress_bar.update(real_img.shape[0])
 
-        # ===== visualization =====
-
-        real_img_for_plot = iter(testloader).next()[0].to(device)
+        # ===== test =====
 
         encoder.eval()
         decoder.eval()
+
+        real_img_for_plot = iter(testloader).next()[0].to(device)
 
         z_mean, _ = encoder(real_img_for_plot)
         z = z_mean
