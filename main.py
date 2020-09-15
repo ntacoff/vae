@@ -6,75 +6,99 @@ import random
 import matplotlib.pyplot as plt
 import torch
 import torch.nn as nn
+from torch.utils.data import DataLoader
+from torchvision import datasets, transforms
+from tqdm import tqdm
 
 import model.vae as model
 import util
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+# device = torch.device("cpu")
 torch_default = {"dtype": torch.float32, "device": device}
 
 # config
 learning_rate = 0.001
 z_dim = 20
-mini_batch_size = 64
+mini_batch_size = 60
+(col_plot, row_plot) = (5, 4)
+n_test_plot = col_plot * 2
 
 
 def main():
 
-    (x_train, _), (_, _) = util.load_data("mnist")
-    data_size = x_train.shape[0]
+    transform = transforms.Compose([transforms.ToTensor()])
 
-    encoder = model.Encoder(z_dim)
-    decoder = model.Decoder(z_dim)
+    trainloader = DataLoader(
+        datasets.MNIST(
+            root="./datasets/", train=True, download=True, transform=transform
+        ),
+        batch_size=mini_batch_size,
+        shuffle=True,
+    )
+
+    testloader = DataLoader(
+        datasets.MNIST(
+            root="./datasets/", train=False, download=True, transform=transform
+        ),
+        batch_size=n_test_plot,
+        shuffle=False,
+    )
+
+    encoder = model.Encoder(z_dim).to(device)
+    decoder = model.Decoder(z_dim).to(device)
 
     optimizer = torch.optim.Adam(
         list(encoder.parameters()) + list(decoder.parameters()), learning_rate
     )
 
-    encoder.train()
-    decoder.train()
+    for i in range(10):
 
-    for i in range(100000):
+        with tqdm(total=len(trainloader.dataset)) as progress_bar:
+            for real_img, _ in trainloader:
 
-        img_idx = random.sample(range(data_size), mini_batch_size)
-        real_img = x_train[img_idx]
+                real_img = real_img.to(device)
 
-        z_mean, z_var = encoder(real_img)
-        kl_divergence = -0.5 * torch.mean(
-            torch.sum(1 + torch.log(z_var) - z_mean ** 2 - z_var)
-        )
+                encoder.train()
+                decoder.train()
 
-        epsilon = torch.empty_like(z_mean).normal_(0, 1).to(**torch_default)
-        z = z_mean + epsilon * z_var ** 0.5
-        fake_img = decoder(z)
+                z_mean, z_var = encoder(real_img)
+                kl_divergence = -0.5 * torch.mean(
+                    torch.sum(1 + torch.log(z_var) - z_mean ** 2 - z_var, dim=-1)
+                )
 
-        x = real_img.view(real_img.shape[0], -1)
-        y = fake_img.view(fake_img.shape[0], -1)
-        reconstruction = torch.mean(
-            torch.sum(x * torch.log(y) + (1 - x) * torch.log(1 - y))
-        )
-        loss = kl_divergence - reconstruction
+                epsilon = torch.empty_like(z_mean).normal_(0, 1).to(**torch_default)
+                z = z_mean + epsilon * z_var ** 0.5
+                fake_img = decoder(z)
 
-        optimizer.zero_grad()
-        loss.backward()
-        optimizer.step()
+                x = real_img.view(real_img.shape[0], -1)
+                y = fake_img.view(fake_img.shape[0], -1)
+                reconstruction = torch.mean(
+                    torch.sum(x * torch.log(y) + (1 - x) * torch.log(1 - y), dim=-1)
+                )
+                loss = kl_divergence - reconstruction
+
+                optimizer.zero_grad()
+                loss.backward()
+                optimizer.step()
+
+                progress_bar.set_postfix(loss=loss.item())
+                progress_bar.update(real_img.shape[0])
 
         # ===== visualization =====
-        if i % 1000 == 0:
-            print("loss: " + str(loss))
 
-            (col, row) = (5, 4)
+        real_img_for_plot = iter(testloader).next()[0].to(device)
 
-            real_img_for_plot = x_train[range(col * 2)]
+        encoder.eval()
+        decoder.eval()
 
-            z_mean, z_std = encoder(real_img_for_plot)
-            epsilon = torch.empty_like(z_mean).normal_(0, 1).to(**torch_default)
-            z = z_mean + epsilon * z_std
-            fake_img_for_plot = decoder(z)
+        z_mean, _ = encoder(real_img_for_plot)
+        z = z_mean
+        fake_img_for_plot = decoder(z)
 
-            img_for_plot = torch.cat((real_img_for_plot, fake_img_for_plot))
-            util.plot_images(img_for_plot, col=col, row=row)
-            plt.savefig("img/figure_" + str(i) + ".png")
+        img_for_plot = torch.cat((real_img_for_plot, fake_img_for_plot))
+        util.plot_images(img_for_plot, col=col_plot, row=row_plot)
+        plt.savefig("img/figure_" + str(i) + ".png")
 
 
 if __name__ == "__main__":

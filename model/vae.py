@@ -27,8 +27,6 @@ class Decoder(nn.Module):
 
         self.init_weights()
 
-        self = self.to(device)
-
     def init_weights(self):
         nn.init.kaiming_normal_(
             self.layer1[0].weight.data, mode="fan_in", nonlinearity="relu"
@@ -68,8 +66,6 @@ class Encoder(nn.Module):
         )
 
         self.init_weights()
-
-        self = self.to(device)
 
     def init_weights(self):
         nn.init.kaiming_normal_(
