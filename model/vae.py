@@ -61,9 +61,9 @@ class Encoder(nn.Module):
         self.layer_reshape = Reshape(28 * 28)
         self.layer1 = nn.Sequential(nn.Linear(28 * 28, 256), nn.ReLU(),)
         self.layer2 = nn.Sequential(nn.Linear(256, 128), nn.ReLU(),)
-        self.layer3 = nn.Sequential(
-            nn.Linear(128, z_dim * 2), nn.Sigmoid(), Reshape(z_dim, 2)
-        )
+        self.layer3 = nn.Sequential(nn.Linear(128, z_dim * 2), Reshape(z_dim, 2))
+
+        self.softplus = nn.Softplus()
 
         self.init_weights()
 
@@ -78,7 +78,7 @@ class Encoder(nn.Module):
         nn.init.zeros_(self.layer2[0].bias.data)
         nn.init.xavier_normal_(
             self.layer3[0].weight.data,
-            gain=nn.init.calculate_gain(nonlinearity="sigmoid"),
+            gain=nn.init.calculate_gain(nonlinearity="linear"),
         )
         nn.init.zeros_(self.layer3[0].bias.data)
 

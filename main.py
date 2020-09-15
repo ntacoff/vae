@@ -62,13 +62,15 @@ def main():
 
                 real_img = real_img.to(device)
 
-                z_mean, z_var = encoder(real_img)
+                z_mean, z_log_var = encoder(real_img)
                 kl_divergence = -0.5 * torch.mean(
-                    torch.sum(1 + torch.log(z_var) - z_mean ** 2 - z_var, dim=-1)
+                    torch.sum(
+                        1 + z_log_var - z_mean ** 2 - torch.exp(z_log_var), dim=-1
+                    )
                 )
 
                 epsilon = torch.empty_like(z_mean).normal_(0, 1).to(**torch_default)
-                z = z_mean + epsilon * z_var ** 0.5
+                z = z_mean + epsilon * torch.exp(z_log_var) ** 0.5
                 fake_img = decoder(z)
 
                 x = real_img.view(real_img.shape[0], -1)
@@ -86,7 +88,6 @@ def main():
                 progress_bar.update(real_img.shape[0])
 
         # ===== test =====
-
         encoder.eval()
         decoder.eval()
 
