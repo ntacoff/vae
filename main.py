@@ -14,7 +14,6 @@ import model.vae as model
 from util import plot_images
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-torch_default = {"dtype": torch.float32, "device": device}
 
 # config
 learning_rate = 0.001
@@ -69,7 +68,7 @@ def main():
                     )
                 )
 
-                epsilon = torch.empty_like(z_mean).normal_(0, 1).to(**torch_default)
+                epsilon = torch.empty_like(z_mean).normal_(0, 1).to(device)
                 z = z_mean + epsilon * torch.exp(z_log_var) ** 0.5
                 fake_img = decoder(z)
 
