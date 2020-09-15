@@ -14,7 +14,6 @@ import model.vae as model
 from util import plot_images
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-# device = torch.device("cpu")
 torch_default = {"dtype": torch.float32, "device": device}
 
 # config
