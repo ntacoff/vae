@@ -11,7 +11,7 @@ from torchvision import datasets, transforms
 from tqdm import tqdm
 
 import model.vae as model
-import util
+from util import plot_images
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 # device = torch.device("cpu")
@@ -97,7 +97,7 @@ def main():
         fake_img_for_plot = decoder(z)
 
         img_for_plot = torch.cat((real_img_for_plot, fake_img_for_plot))
-        util.plot_images(img_for_plot, col=col_plot, row=row_plot)
+        plot_images(img_for_plot, col=col_plot, row=row_plot)
         plt.savefig("img/figure_" + str(i) + ".png")
 
 
